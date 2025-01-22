@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 51, 51, 51;
+  --background-start: 240, 240, 240;
+  --background-end: 255, 255, 255;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+    to bottom,
+    rgb(var(--background-start)),
+    rgb(var(--background-end))
+  );
+  min-height: 100vh;
+}
+
+.file-input-wrapper {
+  @apply relative inline-flex items-center;
+}
+
+.file-input-wrapper input[type="file"] {
+  @apply opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10;
+}
+
+.file-input-button {
+  @apply px-6 py-3 bg-emerald-600 text-white rounded-lg shadow-md hover:bg-emerald-700 
+  transition-colors duration-200 flex items-center gap-2 font-medium;
+} 
