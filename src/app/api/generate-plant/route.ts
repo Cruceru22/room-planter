@@ -6,6 +6,10 @@ import path from 'path'
 import fs from 'fs'
 import os from 'os'
 
+// Configure maximum duration (60 seconds) and force dynamic execution
+export const maxDuration = 60;
+export const dynamic = 'force-dynamic';
+
 const apiKey = process.env.OPENAI_API_KEY
 if (!apiKey) {
   throw new Error("Missing OPENAI_API_KEY environment variable")
