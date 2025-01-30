@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { useToast } from "~/hooks/use-toast";
-import { Loader2, Download, ImageIcon } from "lucide-react";
+import { Loader2, Download, Sprout } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 
 interface GeneratePlantResponse {
   imageUrl: string;
@@ -22,7 +23,6 @@ export default function Home() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const { toast } = useToast();
 
   const showError = useCallback(
@@ -36,21 +36,6 @@ export default function Home() {
     },
     [toast],
   );
-
-  const drawImageToCanvas = useCallback((img: HTMLImageElement) => {
-    if (!canvasRef.current) return;
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    // Set canvas dimensions
-    canvas.width = img.width;
-    canvas.height = img.height;
-
-    // Clear and draw
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0);
-  }, []);
 
   const processFile = useCallback(
     (file: File) => {
@@ -78,13 +63,7 @@ export default function Home() {
       reader.onload = (e) => {
         const result = e.target?.result;
         if (typeof result === "string") {
-          // Create a new image to ensure it triggers the load event
-          const img = new Image();
-          img.onload = () => {
-            setRoomImage(result);
-            drawImageToCanvas(img);
-          };
-          img.src = result;
+          setRoomImage(result);
         }
       };
       reader.onerror = () => {
@@ -92,7 +71,7 @@ export default function Home() {
       };
       reader.readAsDataURL(file);
     },
-    [showError, drawImageToCanvas],
+    [showError],
   );
 
   const handleImageUpload = useCallback(
@@ -130,15 +109,8 @@ export default function Home() {
   );
 
   const addPlants = async () => {
-    if (!canvasRef.current || !roomImage) {
+    if (!roomImage) {
       showError("Please upload a room image first");
-      return;
-    }
-
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      showError("Failed to get canvas context");
       return;
     }
 
@@ -163,43 +135,12 @@ export default function Home() {
         );
       }
 
-      // Store the generated image
       setGeneratedImage(data.imageUrl);
-
-      // Create a new image to load the result
-      const plantImg = new Image();
-      plantImg.crossOrigin = "anonymous";
-      plantImg.onload = () => {
-        // Set canvas dimensions first
-        canvas.width = plantImg.width;
-        canvas.height = plantImg.height;
-
-        // Then clear and draw
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(plantImg, 0, 0);
-      };
-      plantImg.onerror = (e) => {
-        console.error("Error loading generated image:", e);
-        showError("Failed to load generated image");
-        // On error, redraw the original image
-        if (roomImage) {
-          const originalImg = new Image();
-          originalImg.onload = () => drawImageToCanvas(originalImg);
-          originalImg.src = roomImage;
-        }
-      };
-      plantImg.src = data.imageUrl;
     } catch (error) {
       console.error("Error adding plants:", error);
       showError(
         error instanceof Error ? error.message : "Failed to add plants",
       );
-      // On error, redraw the original image
-      if (roomImage) {
-        const originalImg = new Image();
-        originalImg.onload = () => drawImageToCanvas(originalImg);
-        originalImg.src = roomImage;
-      }
     } finally {
       setIsGenerating(false);
     }
@@ -212,130 +153,132 @@ export default function Home() {
       className="min-h-screen bg-white px-4 py-8 md:px-8"
     >
       {/* Minimal Header */}
-      <motion.div
-        initial={{ y: -20 }}
-        animate={{ y: 0 }}
-        className="mb-12 text-center"
-      >
-        <h1 className="text-3xl font-light tracking-tight text-gray-900 md:text-4xl">
-          Room Planter
+      <motion.div initial={{ y: -20 }} animate={{ y: 0 }} className="mb-6">
+        <h1 className="flex max-w-4xl justify-start text-5xl font-semibold text-gray-900 sm:text-7xl">
+          Make the nature come to your room.
         </h1>
-        <p className="mt-2 text-sm text-gray-500">
-          Transform your space with AI-generated plants
-        </p>
       </motion.div>
 
-      <div className="mx-auto max-w-3xl">
-        {/* Upload Section */}
-        <AnimatePresence mode="wait">
-          {!roomImage ? (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="rounded-lg border border-dashed border-gray-200 bg-gray-50/50"
-            >
-              <div
-                className={`relative flex min-h-[300px] cursor-pointer flex-col items-center justify-center p-8 transition-colors ${
-                  isDragging ? "bg-gray-50" : ""
-                }`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                onClick={() => document.getElementById("room-image")?.click()}
-              >
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <ImageIcon className="mb-4 h-8 w-8 text-gray-400" />
-                  <p className="text-sm text-gray-500">
-                    Drop your room photo here or click to browse
-                  </p>
-                </motion.div>
-                <Input
-                  id="room-image"
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-              </div>
-            </motion.div>
-          ) : (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="overflow-hidden rounded-lg bg-white"
-            >
-              <div className="relative">
-                <canvas ref={canvasRef} className="w-full rounded-lg" />
-                <img
-                  src={roomImage}
-                  alt="Uploaded room"
-                  className="hidden"
-                  onLoad={(e) =>
-                    drawImageToCanvas(e.target as HTMLImageElement)
-                  }
-                />
-                <AnimatePresence>
-                  {isGenerating && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="absolute inset-0 flex items-center justify-center backdrop-blur-sm"
-                    >
-                      <div className="rounded-full bg-black/80 p-4">
-                        <Loader2 className="h-6 w-6 animate-spin text-white" />
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              {/* Action Buttons */}
+      <div className="flex flex-col gap-12 sm:flex-row sm:gap-4 sm:pt-12">
+        <div className="flex sm:w-1/3">
+          <h1 className="text-lg font-light text-gray-900 sm:max-w-sm sm:text-3xl">
+            Room Planter is a tool that helps you to improve your room with
+            plants!
+          </h1>
+        </div>
+        <div className="sm:w-2/3">
+          {/* Upload Section */}
+          <AnimatePresence mode="wait">
+            {!roomImage ? (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mt-6 flex justify-center gap-3"
+                exit={{ opacity: 0, y: -20 }}
+                className="w-full overflow-hidden rounded-3xl border border-dashed border-gray-200 bg-gray-100"
               >
-                <Button
-                  onClick={addPlants}
-                  disabled={isGenerating}
-                  className="min-w-[140px] rounded-full"
+                <div
+                  className={`relative flex h-[400px] w-full cursor-pointer flex-col items-center justify-center p-8 transition-colors ${
+                    isDragging ? "bg-gray-200" : ""
+                  }`}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onClick={() => document.getElementById("room-image")?.click()}
                 >
-                  {isGenerating ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    "Add Plants"
-                  )}
-                </Button>
-                {generatedImage && (
-                  <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                  >
-                    <Button
-                      onClick={() => {
-                        const a = document.createElement("a");
-                        a.href = generatedImage;
-                        a.download = "room-with-plants.png";
-                        a.click();
-                      }}
-                      variant="outline"
-                      className="min-w-[140px] rounded-full"
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      Download
-                    </Button>
-                  </motion.div>
-                )}
+                  <div className="flex flex-col items-center space-y-6">
+                    <Sprout className="h-16 w-16 text-gray-400" />
+                    <p className="text-sm text-gray-500">
+                      Drop your room photo here or click to browse
+                    </p>
+                  </div>
+
+                  <Input
+                    id="room-image"
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                </div>
               </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="overflow-hidden rounded-3xl bg-white"
+              >
+                <div className="relative h-[400px] w-full">
+                  {roomImage && !generatedImage && (
+                    <Image
+                      src={roomImage}
+                      alt="Room"
+                      fill
+                      className="rounded-3xl object-cover"
+                      priority
+                    />
+                  )}
+                  {generatedImage && (
+                    <Image
+                      src={generatedImage}
+                      alt="Room with plants"
+                      fill
+                      className="rounded-3xl object-cover"
+                      priority
+                    />
+                  )}
+                  <AnimatePresence>
+                    {isGenerating && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 flex items-center justify-center rounded-3xl backdrop-blur-sm"
+                      >
+                        <div className="rounded-full bg-black/80 p-4">
+                          <Loader2 className="h-6 w-6 animate-spin text-white" />
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Action Buttons */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-6 flex justify-center gap-3"
+                >
+                  <Button
+                    onClick={addPlants}
+                    variant="ghost"
+                    disabled={isGenerating}
+                  >
+                    {isGenerating ? "Loading..." : "Add Plants"}
+                  </Button>
+                  {generatedImage && (
+                    <motion.div
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                    >
+                      <Button
+                        onClick={() => {
+                          const a = document.createElement("a");
+                          a.href = generatedImage;
+                          a.download = "room-with-plants.png";
+                          a.click();
+                        }}
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Download
+                      </Button>
+                    </motion.div>
+                  )}
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </motion.main>
   );
