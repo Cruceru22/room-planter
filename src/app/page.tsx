@@ -249,30 +249,42 @@ export default function Home() {
                   animate={{ opacity: 1, y: 0 }}
                   className="mt-6 flex justify-center gap-3"
                 >
-                  <Button
-                    onClick={addPlants}
-                    variant="ghost"
-                    disabled={isGenerating}
-                  >
-                    {isGenerating ? "Loading..." : "Add Plants"}
-                  </Button>
-                  {generatedImage && (
-                    <motion.div
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
+                  {!generatedImage ? (
+                    <Button
+                      onClick={addPlants}
+                      variant="ghost"
+                      disabled={isGenerating}
                     >
+                      {isGenerating ? "Loading..." : "Add Plants"}
+                    </Button>
+                  ) : (
+                    <>
                       <Button
                         onClick={() => {
-                          const a = document.createElement("a");
-                          a.href = generatedImage;
-                          a.download = "room-with-plants.png";
-                          a.click();
+                          setRoomImage(null);
+                          setGeneratedImage(null);
                         }}
+                        variant="ghost"
                       >
-                        <Download className="mr-2 h-4 w-4" />
-                        Download
+                        New Image
                       </Button>
-                    </motion.div>
+                      <motion.div
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                      >
+                        <Button
+                          onClick={() => {
+                            const a = document.createElement("a");
+                            a.href = generatedImage;
+                            a.download = "room-with-plants.png";
+                            a.click();
+                          }}
+                        >
+                          <Download className="mr-2 h-4 w-4" />
+                          Download
+                        </Button>
+                      </motion.div>
+                    </>
                   )}
                 </motion.div>
               </motion.div>
